@@ -218,8 +218,14 @@ int main(void) {
 
         char input[6];
 
-        printf("Guessed: ");
-        scanf("%5s", input);
+        if (size == 1) {
+            memcpy(input, words[candidates[index[0]]], 6);
+            printf("Guessed (auto): %s\n", input);
+        } else {
+            printf("Guessed: ");
+            scanf("%5s", input);
+        }
+
 
         char validation[6];
 
