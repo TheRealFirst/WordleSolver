@@ -5,57 +5,13 @@
 
 #define WORDS 12972
 
-typedef struct{
-        char letter;
-        uint16_t count;
-    }LetterStat;
-
-static void swap(LetterStat *a, LetterStat *b) {
-    LetterStat tmp = *a;
-    *a = *b;
-    *b = tmp;
-}
-
-static int partition(LetterStat arr[], int low, int high) {
-    // pivot: first element
-    uint32_t pcount = arr[low].count;
-    char pletter = arr[low].letter;
-
-    int i = low;
-    int j = high;
-
-    while (i < j) {
-        // We want DESCENDING by count:
-        // move i forward while arr[i] should stay on the left side
-        while (i <= high - 1 &&
-               (arr[i].count > pcount ||
-               (arr[i].count == pcount && arr[i].letter <= pletter))) {
-            i++;
-        }
-
-        // move j backward while arr[j] should stay on the right side
-        while (j >= low + 1 &&
-               (arr[j].count < pcount ||
-               (arr[j].count == pcount && arr[j].letter > pletter))) {
-            j--;
-        }
-
-        if (i < j) swap(&arr[i], &arr[j]);
-    }
-
-    swap(&arr[low], &arr[j]);
-    return j;
-}
-
-static void quickSort(LetterStat arr[], int low, int high) {
-    if (low < high) {
-        int pi = partition(arr, low, high);
-        quickSort(arr, low, pi - 1);
-        quickSort(arr, pi + 1, high);
-    }
-}
 
 int main(void) {
+    static char letters[26];
+
+    for(int i = 0; i < 26; i++)
+        letters[i] = 'a' + i;
+
     FILE *fp = fopen("data/wordle.csv", "rb");
     if (!fp) { perror("fopen"); return 1; }
 
@@ -96,13 +52,12 @@ int main(void) {
 
     free(buffer);
 
-    LetterStat stats[26];
+    int stats[26];
 
-    LetterStat positionStat[5][26];
+    int positionStat[5][26];
 
 
     int score[WORDS];
-    int sizes[5] = {26, 26, 26, 26, 26};
 
     char correctLetters[5] = {0};
     int maxCount[26];
@@ -128,39 +83,21 @@ int main(void) {
         memset(stats, 0, sizeof stats);
         memset(positionStat, 0, sizeof positionStat);
 
-        for (int i = 0; i < 26; i++) {
-            stats[i].letter = 'a' + i;
-            for (int j = 0; j < 5; j++) {
-                positionStat[j][i].letter = 'a' + i;
-            }
-        }
-
         for(int i = 0; i < candidatesCount; i++)
         {
             for(int j = 0; j < 5; j++)
             {
                 for(int k = 0; k < 26; k++)
                 {
-                    if(words[candidates[i]][j] == stats[k].letter)
+                    if(words[candidates[i]][j] == letters[k])
                     {
-                        stats[k].count += 1;
-                        positionStat[j][k].count += 1;
+                        stats[k]++;
+                        positionStat[j][k]++;
                         break;
                     }
                 }
             } 
         }
-
-        
-        int n = (int)(sizeof(stats) / sizeof(stats[0]));
-
-        quickSort(stats, 0, n - 1);
-
-        for(int i = 0; i < 5; i++)
-        {
-            quickSort(positionStat[i], 0, 25);
-        }
-
 
         memset(score, 0, sizeof score);
         
@@ -168,11 +105,11 @@ int main(void) {
         {
             for(int j = 0; j < 5; j++)
             {
-                for(int k = 0; k < sizes[j]; k++)
+                for(int k = 0; k < 26; k++)
                 {
-                    if(words[candidates[i]][j] == positionStat[j][k].letter)
+                    if(words[candidates[i]][j] == letters[k])
                     {
-                        score[i] += positionStat[j][k].count;
+                        score[i] += positionStat[j][k];
                         break;
                     }
                 }
