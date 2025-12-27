@@ -172,7 +172,7 @@ int main(void) {
                 {
                     if(words[candidates[i]][j] == positionStat[j][k].letter)
                     {
-                        score[i] += 26 - k;
+                        score[i] += positionStat[j][k].count;
                         break;
                     }
                 }
@@ -319,6 +319,7 @@ int main(void) {
         }
 
         candidatesCount = write;
+        printf("Remaining possibilites: %i \n", candidatesCount);
 
         free(index);
     }
