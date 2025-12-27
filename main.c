@@ -112,55 +112,70 @@ int main(void) {
 
     LetterStat positionStat[5][26];
 
-    memset(stats, 0, sizeof stats);
-    memset(positionStat, 0, sizeof positionStat);
-
-    for (int i = 0; i < 26; i++) {
-        stats[i].letter = 'a' + i;
-        for (int j = 0; j < 5; j++) {
-            positionStat[j][i].letter = 'a' + i;
-        }
-    }
-
-    for(int i = 0; i < WORDS; i++)
-    {
-        for(int j = 0; j < 5; j++)
-        {
-            for(int k = 0; k < 26; k++)
-            {
-                if(words[i][j] == stats[k].letter)
-                {
-                    stats[k].count += 1;
-                    positionStat[j][k].count += 1;
-                    break;
-                }
-            }
-        } 
-    } 
-
-    int n = (int)(sizeof(stats) / sizeof(stats[0]));
-
-    quickSort(stats, 0, n - 1);
-
-    for(int i = 0; i < 5; i++)
-    {
-        quickSort(positionStat[i], 0, 25);
-    }
 
     int score[WORDS];
     int sizes[5] = {26, 26, 26, 26, 26};
 
-    for(int x = 0; x < 6; x++)
+    char correctLetters[5] = {0};
+    char wrongLetters[21] = {0};
+    int wrongLetterCount = 0;
+
+    int candidates[WORDS];
+    int candidatesCount = WORDS;
+    
+    for(int i = 0; i < WORDS; i++)
     {
+        candidates[i] = i;
+    }
+
+    for(int x = 0; x < 6; x++)
+    {    
+        memset(stats, 0, sizeof stats);
+        memset(positionStat, 0, sizeof positionStat);
+
+        for (int i = 0; i < 26; i++) {
+            stats[i].letter = 'a' + i;
+            for (int j = 0; j < 5; j++) {
+                positionStat[j][i].letter = 'a' + i;
+            }
+        }
+
+        for(int i = 0; i < candidatesCount; i++)
+        {
+            for(int j = 0; j < 5; j++)
+            {
+                for(int k = 0; k < 26; k++)
+                {
+                    if(words[candidates[i]][j] == stats[k].letter)
+                    {
+                        stats[k].count += 1;
+                        positionStat[j][k].count += 1;
+                        break;
+                    }
+                }
+            } 
+        }
+
+        
+        int n = (int)(sizeof(stats) / sizeof(stats[0]));
+
+        quickSort(stats, 0, n - 1);
+
+        for(int i = 0; i < 5; i++)
+        {
+            quickSort(positionStat[i], 0, 25);
+        }
+
+
         memset(score, 0, sizeof score);
         
-        for(int i = 0; i < WORDS; i++)
+        for(int i = 0; i < candidatesCount; i++)
         {
             for(int j = 0; j < 5; j++)
             {
                 for(int k = 0; k < sizes[j]; k++)
                 {
-                    if(words[i][j] == positionStat[j][k].letter)
+                    if(words[candidates[i]][j] == positionStat[j][k].letter)
                     {
                         score[i] += 26 - k;
                         break;
@@ -183,7 +198,7 @@ int main(void) {
 
         index[0] = 0;
 
-        for(int i = 0; i < WORDS; i++)
+        for(int i = 0; i < candidatesCount; i++)
         {
             if(score[i] > max){
                 size = 1;
@@ -203,7 +218,7 @@ int main(void) {
 
         for(int i = 0; i < size; i++)
         {
-            printf("%s \n", words[index[i]]);
+            printf("%s \n", words[candidates[index[i]]]);
         }
 
         char input[6];
@@ -218,35 +233,71 @@ int main(void) {
 
 
         for (int pos = 0; pos < 5; ++pos) {
-        int digit = validation[pos] - '0';
-            
-            if(digit == 0)
+            int digit = validation[pos] - '0';
+            switch (digit)
             {
+            case 0:
                 for(int i = 0; i < 5; i++)
                 {
                     remove_letter(positionStat[i], &sizes[i], input[pos]);
                 }
-            }
-            else if (digit == 1)
-            {
+                wrongLetters[wrongLetterCount] = input[pos];
+                wrongLetterCount++;
+                break;
+            case 1:
                 remove_letter(positionStat[pos], &sizes[pos], input[pos]);
-            }
-            else
-            {
+                break;
+            case 2:
                 for(int i = 0; i < sizes[pos]; i++)
                 {   
                     if(positionStat[pos][i].letter == input[pos])
                     {
                         positionStat[pos][0] = positionStat[pos][i];
                         sizes[pos] = 1;
+                        correctLetters[pos] = input[pos];
                         break;
                     }
                 }
+                break;
+            default:
+                break;
             }
         }
 
         for (int pos = 0; pos < 5; ++pos) {
             quickSort(positionStat[pos], 0, sizes[pos] - 1);
+        }
+        
+        int i = 0;
+        while (i < candidatesCount)
+        {
+            int removed = 0;
+
+            for(int j = 0; j < 5; j++)
+            {
+                if(correctLetters[j] != 0)
+                {
+                    if(words[candidates[i]][j] != correctLetters[j])
+                    {
+                        candidates[i] = candidates[candidatesCount-1];
+                        candidatesCount--;
+                        removed = 1;
+                        break;
+                    }
+                }
+                
+                for(int k = 0; k < wrongLetterCount; k++)
+                    {
+                        if(wrongLetters[k] == words[candidates[i]][j])
+                        {
+                            candidates[i] = candidates[candidatesCount-1];
+                            candidatesCount--;
+                            removed = 1;
+                            break;
+                        }
+                    }
+            }
+            if(removed == 0) i++;
         }
 
         free(index);
