@@ -55,18 +55,6 @@ static void quickSort(LetterStat arr[], int low, int high) {
     }
 }
 
-void remove_letter(LetterStat arr[], int *size, char letter) {
-    for (int i = 0; i < *size; i++) {
-        if (arr[i].letter == letter) {
-            for (int j = i; j < *size - 1; j++) {
-                arr[j] = arr[j + 1];
-            }
-            (*size)--;
-            return;
-        }
-    }
-}
-
 int main(void) {
     FILE *fp = fopen("data/wordle.csv", "rb");
     if (!fp) { perror("fopen"); return 1; }
@@ -117,8 +105,15 @@ int main(void) {
     int sizes[5] = {26, 26, 26, 26, 26};
 
     char correctLetters[5] = {0};
-    char wrongLetters[21] = {0};
-    int wrongLetterCount = 0;
+    int maxCount[26];
+    int minCount[26] = {0};
+    uint8_t forbidPos[5][26] = {0};
+
+    for(int i = 0; i < 26; i++)
+    {
+        maxCount[i] = 5;
+    }
+    
 
     int candidates[WORDS];
     int candidatesCount = WORDS;
@@ -231,78 +226,96 @@ int main(void) {
         printf("for each Position (no spaces) tell me if it was correct or wrong (not in word = 0, in word = 1, correct place = 2)");
         scanf("%5s", validation);
 
+        int solved = 1;
+        for (int i = 0; i < 5; i++) {
+            if (validation[i] != '2') {
+                solved = 0;
+                break;
+            }
+        }
+
+        if (solved) {
+            printf("Solved!\n");
+            break;
+        }
+
+        int guessMin[26] = {0};
+        int guessGray[26] = {0};
 
         for (int pos = 0; pos < 5; ++pos) {
             int digit = validation[pos] - '0';
+            int letter = input[pos] - 'a';
             switch (digit)
             {
             case 0:
-                for(int i = 0; i < 5; i++)
-                {
-                    remove_letter(positionStat[i], &sizes[i], input[pos]);
-                }
-                wrongLetters[wrongLetterCount] = input[pos];
-                wrongLetterCount++;
+                guessGray[letter]++;
                 break;
             case 1:
-                remove_letter(positionStat[pos], &sizes[pos], input[pos]);
+                forbidPos[pos][letter] = 1;
+                guessMin[letter]++;
                 break;
             case 2:
-                for(int i = 0; i < sizes[pos]; i++)
-                {   
-                    if(positionStat[pos][i].letter == input[pos])
-                    {
-                        positionStat[pos][0] = positionStat[pos][i];
-                        sizes[pos] = 1;
-                        correctLetters[pos] = input[pos];
-                        break;
-                    }
-                }
+                correctLetters[pos] = input[pos];
+                guessMin[letter]++;
                 break;
             default:
                 break;
             }
         }
 
-        for (int pos = 0; pos < 5; ++pos) {
-            quickSort(positionStat[pos], 0, sizes[pos] - 1);
-        }
-        
-        int i = 0;
-        while (i < candidatesCount)
+        for(int i = 0; i < 26; i++)
         {
-            int removed = 0;
-
-            for(int j = 0; j < 5; j++)
+            if(guessMin[i] == 0 && guessGray[i] > 0)
             {
-                if(correctLetters[j] != 0)
-                {
-                    if(words[candidates[i]][j] != correctLetters[j])
-                    {
-                        candidates[i] = candidates[candidatesCount-1];
-                        candidatesCount--;
-                        removed = 1;
-                        break;
-                    }
-                }
-                
-                for(int k = 0; k < wrongLetterCount; k++)
-                    {
-                        if(wrongLetters[k] == words[candidates[i]][j])
-                        {
-                            candidates[i] = candidates[candidatesCount-1];
-                            candidatesCount--;
-                            removed = 1;
-                            break;
-                        }
-                    }
+                maxCount[i] = 0;
             }
-            if(removed == 0) i++;
+            else if(guessMin[i] > 0 && guessGray[i] > 0)
+            {
+                maxCount[i] = guessMin[i];
+            }
+
+            if(minCount[i] < guessMin[i]) minCount[i] = guessMin[i];
         }
+
+        int write = 0;
+        for(int i = 0; i < candidatesCount; i++)
+        {
+            int idx = candidates[i];
+            char *w = words[idx];
+            
+            int ok = 1;
+            for(int pos = 0; pos < 5; pos++)
+            {
+                if(correctLetters[pos] && w[pos] != correctLetters[pos]) {ok = 0; break;}
+            }
+            if(!ok) continue;
+
+            for(int pos = 0; pos < 5; pos++)
+            {
+                int letter = w[pos] - 'a';
+                if(forbidPos[pos][letter]) {ok = 0; break;}
+            }
+            if(!ok) continue;
+
+            int count[26] = {0};
+
+            for(int pos = 0; pos < 5; pos++) count[w[pos] - 'a']++;
+
+            for(int j = 0; j < 26; j++)
+            {
+                if(maxCount[j] == 0 && count[j] > 0) {ok = 0; break;}
+                if(count[j] < minCount[j]) {ok = 0; break;}
+                if(count[j] > maxCount[j]) {ok = 0; break;}
+            }
+            if(!ok) continue;
+
+            candidates[write++] = idx;
+        }
+
+        candidatesCount = write;
 
         free(index);
     }
-
 
     return 0;
 }
